@@ -23,6 +23,27 @@ if __name__ == "__main__":
              # List dir to debug
              print(f"Contents of base dir: {os.listdir(os.path.dirname(app_path))}")
         
+        # Diagnostic: Check for Streamlit static files
+        import streamlit
+        # In a frozen app, streamlit.__file__ might be pointing to a place inside the bundle.
+        # We try to infer where 'static' should be.
+        # Typically in PyInstaller one-file/one-dir: sys._MEIPASS/streamlit/static
+        if getattr(sys, "frozen", False):
+            base_sl_dir = os.path.join(sys._MEIPASS, "streamlit")
+            static_index = os.path.join(base_sl_dir, "static", "index.html")
+            print(f"Checking for Streamlit static files at: {static_index}")
+            if os.path.exists(static_index):
+                print(" -> SUCCESS: streamline/static/index.html found.")
+            else:
+                print(" -> ERROR: streamline/static/index.html NOT FOUND!")
+                if os.path.exists(base_sl_dir):
+                    print(f"    Contents of {base_sl_dir}: {os.listdir(base_sl_dir)}")
+                    if os.path.exists(os.path.join(base_sl_dir, "static")):
+                         print(f"    Contents of {os.path.join(base_sl_dir, 'static')}: {os.listdir(os.path.join(base_sl_dir, 'static'))}")
+                else:
+                    print(f"    Directory {base_sl_dir} does not exist.")
+                    print(f"    Root _MEIPASS contents: {os.listdir(sys._MEIPASS)}")
+        
         sys.argv = [
             "streamlit",
             "run",

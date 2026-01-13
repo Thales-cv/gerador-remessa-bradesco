@@ -12,14 +12,22 @@ datas = [
 ]
 
 # Helper to safely copy metadata
+# Helper to safely copy metadata
 def safe_copy_metadata(package):
     try:
         return copy_metadata(package)
     except Exception:
         return []
 
-# Copy metadata for streamlit and its dependencies
-datas += safe_copy_metadata('streamlit')
+from PyInstaller.utils.hooks import collect_all
+
+# Collect all Streamlit data, binaries, and hidden imports
+tmp_ret = collect_all('streamlit')
+datas += tmp_ret[0]
+binaries = tmp_ret[1]
+hiddenimports = tmp_ret[2]
+
+# Add other dependencies metadata
 datas += safe_copy_metadata('tqdm')
 datas += safe_copy_metadata('regex')
 datas += safe_copy_metadata('requests')
@@ -37,19 +45,14 @@ datas += safe_copy_metadata('pydeck')
 datas += safe_copy_metadata('tornado')
 datas += safe_copy_metadata('watchdog')
 
-# Explicitly add Streamlit static and runtime files
-streamlit_dir = os.path.dirname(streamlit.__file__)
-datas.append((os.path.join(streamlit_dir, 'static'), 'streamlit/static'))
-datas.append((os.path.join(streamlit_dir, 'runtime'), 'streamlit/runtime'))
-
 block_cipher = None
 
 a = Analysis(
     ['launcher.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=['./hooks'],
     hooksconfig={},
     runtime_hooks=[],

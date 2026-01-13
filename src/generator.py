@@ -19,6 +19,7 @@ class CNABGenerator:
         self.empresa_data['convenio'] = clean_non_digits(empresa_data['convenio'])
         self.empresa_data['agencia'] = clean_non_digits(empresa_data['agencia'])
         self.empresa_data['conta'] = clean_non_digits(empresa_data['conta'])
+        self.empresa_data['digito_conta'] = clean_non_digits(empresa_data.get('digito_conta', ''))
         self.empresa_data['pix_flag'] = empresa_data.get('pix_flag', '')
         
         self.lines = []
@@ -81,6 +82,7 @@ class CNABGenerator:
             "convenio": self.empresa_data['convenio'],
             "agencia": self.empresa_data['agencia'],
             "conta": self.empresa_data['conta'],
+            "conta_dv": self.empresa_data.get('digito_conta', ''),
             "nome_empresa": self.empresa_data['nome'],
             "data_geracao": datetime.now().strftime("%d%m%Y"),
             "hora_geracao": datetime.now().strftime("%H%M%S"),
@@ -109,63 +111,6 @@ class CNABGenerator:
         # Group by Payment Type (Pix vs Others) because they need different Lotes (45 vs 01/41)
         # Actually, separate batches for Pix (45) and others.
         
-        for p_type, group in df.groupby('payment_type'):
-            self.lotes_count += 1
-            lote_seq = self.lotes_count
-            
-            is_pix = (p_type == 'PIX')
-            forma_lancamento = "45" if is_pix else "41" # 41=TED as default for Other
-            # If same bank (237) -> 01 (CC).
-            # But let's stick to 41 for simplicity unless user requested bank check.
-            # User requirement: "Alerta se houver bancos com códigos inválidos" implies we should handle bank codes.
-            # If COD_BANCO == 237 -> 01 (CC). Else -> 41 (TED).
-            # Let's refine forma_lancamento row by row needed? 
-            # No, Batch Header defines Forma Lancamento.
-            # We MUST split batches by (Pix/TED) AND (Same Bank vs Other Bank)?
-            # Bradesco allows mixed? Usually not. Forma Lancamento is in Header Lote.
-            # So we must sub-group by (Pix) vs (Bradesco CC) vs (TED).
-            
-            # Sub-grouping logic
-            sub_groups = {}
-            for idx, row in group.iterrows():
-                banco = str(row['COD_BANCO']).strip()
-                if is_pix:
-                    key = 'PIX'
-                elif banco == '237':
-                    key = 'CC'
-                else:
-                    key = 'TED'
-                
-                if key not in sub_groups: sub_groups[key] = []
-                sub_groups[key].append(row)
-                
-            for key_type, rows in sub_groups.items():
-                if key_type == 'PIX': forma = '45'
-                elif key_type == 'CC': forma = '01'
-                else: forma = '41'
-                
-                layout_lote = "045" if forma == '45' else "040"
-                
-                header_lote_data = {
-                    "lote": str(self.lotes_count), # Wait, lotes_count needs to increment for each sub-group
-                    "forma_lancamento": forma,
-                    "layout_lote": layout_lote,
-                    "numero_inscricao": self.empresa_data['cnpj'],
-                    "tipo_inscricao": "2",
-                    "convenio": self.empresa_data['convenio'],
-                    "agencia": self.empresa_data['agencia'],
-                    "conta": self.empresa_data['conta'],
-                    "nome_empresa": self.empresa_data['nome']
-                }
-                
-                # Careful with Lote numbering if I loop inside
-                # Actually I should increment lotes_count here
-                if key_type != list(sub_groups.keys())[0]: # If verified
-                     # This logic is messy. Let's just flatten the loop logic.
-                     pass 
-                     
-                # Correct Loop: Group by tuple (is_pix, is_bradesco) -> determine forma.
-            
         # Re-doing the loop Structure
         # 1. Annotate Forma Lancamento on DF
         def get_forma(row):
@@ -192,10 +137,12 @@ class CNABGenerator:
                 "convenio": self.empresa_data['convenio'],
                 "agencia": self.empresa_data['agencia'],
                 "conta": self.empresa_data['conta'],
+                "conta_dv": self.empresa_data.get('digito_conta', ''),
                 "nome_empresa": self.empresa_data['nome'],
                 "logradouro": "", # Optional
                 "cidade": "",
-                "estado": "  "
+                "estado": "  ",
+                "forma_pagamento_servico": "01", # Fixed
             }
             self.lines.append(self._generate_line(HEADER_LOTE, header_lote_data))
             self.registros_count += 1
@@ -222,23 +169,44 @@ class CNABGenerator:
                 elif forma == '41': camara = '018' # TED
                 else: camara = '000' # CC
                 
-                # Segment A
-                seg_a_data = {
-                    "lote": str(lote_seq),
-                    "n_registro": str(items_in_lot),
-                    "camara": camara,
-                    "banco_favorecido": clean_non_digits(row['COD_BANCO']),
-                    "agencia_favorecido": clean_non_digits(row['AGENCIA']),
-                    "conta_favorecido": clean_non_digits(row['CONTA']),
-                    "nome_favorecido": sanitize_text(row['NOME_FAVORECIDO']),
-                    "data_pagamento": date_str,
-                    "valor_pagamento": val_str,
-                    "tipo_inscricao_fav": fav_insc_type,
-                    "numero_inscricao_fav": fav_insc_num,
-                    "n_doc_empresa": str(idx+1).zfill(10), # Seu Numero = ROW ID
-                    "cod_finalidade_ted": "00005" if forma == '41' else ""
-                }
-                self.lines.append(self._generate_line(SEGMENTO_A, seg_a_data))
+                # Segment A Selection
+                if forma == '45':
+                    from .cnab_definitions import SEGMENTO_A_PIX
+                    current_seg_a = SEGMENTO_A_PIX
+                    
+                    seg_a_data = {
+                        "lote": str(lote_seq),
+                        "n_registro": str(items_in_lot),
+                        "camara": camara,
+                        "banco_favorecido": clean_non_digits(row['COD_BANCO']),
+                        "agencia_favorecido": clean_non_digits(row['AGENCIA']),
+                        "conta_favorecido": clean_non_digits(row['CONTA']),
+                        "nome_favorecido": sanitize_text(row['NOME_FAVORECIDO']),
+                        "data_pagamento": date_str,
+                        "valor_pagamento": val_str,
+                        "tipo_inscricao_fav": fav_insc_type,
+                        "numero_inscricao_fav_part1": "0", # Blank/Zero as we moved to reserved
+                        "n_doc_empresa": str(idx+1).zfill(10), # Seu Numero = ROW ID
+                    }
+                else:
+                    current_seg_a = SEGMENTO_A
+                    seg_a_data = {
+                        "lote": str(lote_seq),
+                        "n_registro": str(items_in_lot),
+                        "camara": camara,
+                        "banco_favorecido": clean_non_digits(row['COD_BANCO']),
+                        "agencia_favorecido": clean_non_digits(row['AGENCIA']),
+                        "conta_favorecido": clean_non_digits(row['CONTA']),
+                        "nome_favorecido": sanitize_text(row['NOME_FAVORECIDO']),
+                        "data_pagamento": date_str,
+                        "valor_pagamento": val_str,
+                        "tipo_inscricao_fav": fav_insc_type,
+                        "numero_inscricao_fav": fav_insc_num,
+                        "n_doc_empresa": str(idx+1).zfill(10), # Seu Numero = ROW ID
+                        "cod_finalidade_ted": "00005" if forma == '41' else ""
+                    }
+                
+                self.lines.append(self._generate_line(current_seg_a, seg_a_data))
                 self.registros_count += 1
                 
                 if forma == '45':
