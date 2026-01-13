@@ -2,6 +2,7 @@
 import sys
 import os
 from PyInstaller.utils.hooks import copy_metadata
+import streamlit
 
 datas = [
     ('../app.py', '.'),
@@ -35,6 +36,11 @@ datas += safe_copy_metadata('gitpython')
 datas += safe_copy_metadata('pydeck')
 datas += safe_copy_metadata('tornado')
 datas += safe_copy_metadata('watchdog')
+
+# Explicitly add Streamlit static and runtime files
+streamlit_dir = os.path.dirname(streamlit.__file__)
+datas.append((os.path.join(streamlit_dir, 'static'), 'streamlit/static'))
+datas.append((os.path.join(streamlit_dir, 'runtime'), 'streamlit/runtime'))
 
 block_cipher = None
 
