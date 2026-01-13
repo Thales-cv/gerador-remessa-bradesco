@@ -10,24 +10,31 @@ datas = [
     ('../config.json', '.')
 ]
 
+# Helper to safely copy metadata
+def safe_copy_metadata(package):
+    try:
+        return copy_metadata(package)
+    except Exception:
+        return []
+
 # Copy metadata for streamlit and its dependencies
-datas += copy_metadata('streamlit')
-datas += copy_metadata('tqdm')
-datas += copy_metadata('regex')
-datas += copy_metadata('requests')
-datas += copy_metadata('packaging')
-datas += copy_metadata('filelock')
-datas += copy_metadata('numpy')
-datas += copy_metadata('tokenizers')
-datas += copy_metadata('altair')
-datas += copy_metadata('pandas')
-datas += copy_metadata('pillow')
-datas += copy_metadata('pyarrow')
-datas += copy_metadata('rich')
-datas += copy_metadata('gitpython')
-datas += copy_metadata('pydeck')
-datas += copy_metadata('tornado')
-datas += copy_metadata('watchdog')
+datas += safe_copy_metadata('streamlit')
+datas += safe_copy_metadata('tqdm')
+datas += safe_copy_metadata('regex')
+datas += safe_copy_metadata('requests')
+datas += safe_copy_metadata('packaging')
+datas += safe_copy_metadata('filelock')
+datas += safe_copy_metadata('numpy')
+datas += safe_copy_metadata('tokenizers')
+datas += safe_copy_metadata('altair')
+datas += safe_copy_metadata('pandas')
+datas += safe_copy_metadata('pillow')
+datas += safe_copy_metadata('pyarrow')
+datas += safe_copy_metadata('rich')
+datas += safe_copy_metadata('gitpython')
+datas += safe_copy_metadata('pydeck')
+datas += safe_copy_metadata('tornado')
+datas += safe_copy_metadata('watchdog')
 
 block_cipher = None
 
