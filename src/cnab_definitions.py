@@ -90,9 +90,10 @@ SEGMENTO_A = {
     "valor_real": (163, 177, PadType.ZERO_LEFT, "0"), 
     "info_compl": (178, 217, PadType.SPACE_RIGHT, ""),
     "tipo_inscricao_fav": (218, 218, PadType.ZERO_LEFT, ""), 
-    "numero_inscricao_fav": (219, 233, PadType.ZERO_LEFT, ""),
-    "cod_finalidade_doc": (234, 235, PadType.SPACE_RIGHT, ""),
-    "cod_finalidade_ted": (236, 240, PadType.SPACE_RIGHT, "") 
+    "numero_inscricao_fav": (219, 229, PadType.ZERO_LEFT, ""),
+    "aviso_favorecido": (230, 230, PadType.ZERO_LEFT, "0"),
+    "cod_finalidade_doc": (231, 239, PadType.SPACE_RIGHT, ""),
+    "cod_finalidade_ted": (240, 240, PadType.SPACE_RIGHT, "") 
 }
 
 # Special Layout for Pix in Segment A:
@@ -124,9 +125,9 @@ SEGMENTO_A_PIX = {
     "valor_real": (163, 177, PadType.ZERO_LEFT, "0"), 
     "info_compl": (178, 217, PadType.SPACE_RIGHT, ""),
     "tipo_inscricao_fav": (218, 218, PadType.ZERO_LEFT, ""), 
-    "numero_inscricao_fav_part1": (219, 226, PadType.ZERO_LEFT, "0"), 
-    "reservado_febraban_fix": (227, 229, PadType.SPACE_RIGHT, ""), 
-    "reservado_banco_fix": (230, 240, PadType.SPACE_RIGHT, "") 
+    "numero_inscricao_fav_part1": (219, 229, PadType.ZERO_LEFT, "0"), 
+    "aviso_favorecido": (230, 230, PadType.ZERO_LEFT, "0"),
+    "reservado_banco_fix": (231, 240, PadType.SPACE_RIGHT, "") 
 } 
 
 SEGMENTO_B = {
